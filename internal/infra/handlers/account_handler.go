@@ -1,8 +1,7 @@
-package web
+package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/backendengineerark/clients-api/internal/usecase"
@@ -24,8 +23,6 @@ func (ah *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) 
 		json.NewEncoder(w).Encode(err)
 		return
 	}
-
-	fmt.Println(input)
 
 	usecase := usecase.NewCreateAccountUseCase()
 

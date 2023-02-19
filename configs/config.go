@@ -3,9 +3,9 @@ package configs
 import "github.com/spf13/viper"
 
 type conf struct {
-	AppPort    string `mapstructure:"APP_PORT"`
+	AppPort    int    `mapstructure:"APP_PORT"`
 	DBHost     string `mapstructure:"DB_HOST"`
-	DBPort     int16  `mapstructure:"DB_PORT"`
+	DBPort     int    `mapstructure:"DB_PORT"`
 	DBUser     string `mapstructure:"DB_USER"`
 	DBPassword string `mapstructure:"DB_PASSWORD"`
 	DBName     string `mapstructure:"DB_NAME"`
