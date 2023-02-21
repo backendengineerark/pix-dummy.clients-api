@@ -21,19 +21,20 @@ func NewClient(name string, document string, bithDate string) (*Client, []custom
 
 	birthDateFormatted, err := dates.GenerateBirthDate(bithDate)
 	if err != nil {
-		errors = append(errors, *customerrors.NewError(customerrors.INVALID, err.Error()))
+		errors = append(errors, *customerrors.NewError(customerrors.INVALID_PARAM, err.Error()))
 	}
 
 	client := &Client{
 		Id:        uuid.New().String(),
 		Name:      name,
 		Document:  document,
-		CreatedAt: time.Now(),
 		BirthDate: birthDateFormatted,
+		CreatedAt: time.Now(),
 	}
 
-	if len(client.IsValid()) > 0 {
-		errors = append(errors, client.IsValid()...)
+	validationErrors := client.IsValid()
+	if len(validationErrors) > 0 {
+		errors = append(errors, validationErrors...)
 		return nil, errors
 	}
 
@@ -44,23 +45,27 @@ func (c *Client) IsValid() []customerrors.Error {
 	errorsList := []customerrors.Error{}
 
 	if c.Id == "" {
-		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "Id is required"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID_PARAM, "Id is required"))
 	}
 
 	if c.Name == "" {
-		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "name is required"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID_PARAM, "Name is required"))
 	} else if len(c.Name) < 3 {
-		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "name should have 3 or more characters"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID_PARAM, "Name should have 3 or more characters"))
 	}
 
 	if c.Document == "" {
-		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "document is required"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID_PARAM, "Document is required"))
 	} else if len(c.Document) != 11 {
-		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "document should have 11 numbers"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID_PARAM, "Document should have 11 numbers"))
 	}
 
 	if c.BirthDate.IsZero() {
-		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "birth date is required"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID_PARAM, "Birth date is required"))
+	}
+
+	if c.CreatedAt.IsZero() {
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID_PARAM, "Created at is required"))
 	}
 
 	return errorsList

@@ -8,10 +8,13 @@ import (
 )
 
 type AccountHandler struct {
+	CreateAccountUseCase *usecase.CreateAccountUseCase
 }
 
-func NewAccountHandler() *AccountHandler {
-	return &AccountHandler{}
+func NewAccountHandler(createAccountUseCase *usecase.CreateAccountUseCase) *AccountHandler {
+	return &AccountHandler{
+		CreateAccountUseCase: createAccountUseCase,
+	}
 }
 
 func (ah *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
@@ -24,9 +27,13 @@ func (ah *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	usecase := usecase.NewCreateAccountUseCase()
+	output, errors, err := ah.CreateAccountUseCase.Execute(input)
 
-	output, errors := usecase.Execute(input)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	if len(errors) > 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(errors)

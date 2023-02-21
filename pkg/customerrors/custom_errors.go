@@ -1,7 +1,8 @@
 package customerrors
 
 const (
-	INVALID = "INVALID"
+	INVALID_PARAM         = "INVALID_PARAM"
+	CLIENT_ALREADY_EXISTS = "CLIENT_ALREADY_EXISTS"
 )
 
 type Error struct {
