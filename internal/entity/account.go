@@ -1,9 +1,11 @@
 package entity
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
+	"time"
+
+	"github.com/backendengineerark/clients-api/pkg/customerrors"
 )
 
 type AccountType string
@@ -17,21 +19,25 @@ type Account struct {
 	Number      string
 	AccountType AccountType
 	Client      Client
+	CreatedAt   time.Time
 }
 
-func NewAccount(accountType string, client Client) (*Account, error) {
+func NewAccount(accountType string, client Client) (*Account, []customerrors.Error) {
+	errors := []customerrors.Error{}
+
 	accountTypeCreated, err := CreateAccountType(accountType)
 	if err != nil {
-		return nil, err
+		return nil, append(errors, *err)
 	}
 	return &Account{
 		Number:      GenerateAccountNumber(),
 		AccountType: accountTypeCreated,
 		Client:      client,
+		CreatedAt:   time.Now(),
 	}, nil
 }
 
-func CreateAccountType(accountType string) (AccountType, error) {
+func CreateAccountType(accountType string) (AccountType, *customerrors.Error) {
 
 	if accountType == string(ContaCorrente) {
 		return ContaCorrente, nil
@@ -41,7 +47,7 @@ func CreateAccountType(accountType string) (AccountType, error) {
 		return ContaPoupanca, nil
 	}
 
-	return ContaCorrente, errors.New("account type should be " + string(ContaCorrente) + " or " + string(ContaPoupanca))
+	return ContaCorrente, customerrors.NewError(customerrors.INVALID, fmt.Sprintf("Account type should be %s or %s", string(ContaCorrente), string(ContaPoupanca)))
 }
 
 func GenerateAccountNumber() string {

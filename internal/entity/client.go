@@ -1,8 +1,10 @@
 package entity
 
 import (
-	"errors"
+	"time"
 
+	"github.com/backendengineerark/clients-api/pkg/customerrors"
+	"github.com/backendengineerark/clients-api/pkg/dates"
 	"github.com/google/uuid"
 )
 
@@ -10,45 +12,56 @@ type Client struct {
 	Id        string
 	Name      string
 	Document  string
-	BirthDate string
+	BirthDate time.Time
+	CreatedAt time.Time
 }
 
-func NewClient(name, document, bithDate string) (*Client, []error) {
+func NewClient(name string, document string, bithDate string) (*Client, []customerrors.Error) {
+	errors := []customerrors.Error{}
+
+	birthDateFormatted, err := dates.GenerateBirthDate(bithDate)
+	if err != nil {
+		errors = append(errors, *customerrors.NewError(customerrors.INVALID, err.Error()))
+	}
+
 	client := &Client{
 		Id:        uuid.New().String(),
 		Name:      name,
 		Document:  document,
-		BirthDate: bithDate,
+		CreatedAt: time.Now(),
+		BirthDate: birthDateFormatted,
 	}
 
-	errors := client.IsValid()
-	if len(errors) > 0 {
+	if len(client.IsValid()) > 0 {
+		errors = append(errors, client.IsValid()...)
 		return nil, errors
 	}
 
 	return client, nil
 }
 
-func (c *Client) IsValid() []error {
-	errorsList := []error{}
+func (c *Client) IsValid() []customerrors.Error {
+	errorsList := []customerrors.Error{}
 
 	if c.Id == "" {
-		errorsList = append(errorsList, errors.New("id is required"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "Id is required"))
 	}
 
 	if c.Name == "" {
-		errorsList = append(errorsList, errors.New("name is required"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "name is required"))
 	} else if len(c.Name) < 3 {
-		errorsList = append(errorsList, errors.New("name should have 3 or more characters"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "name should have 3 or more characters"))
 	}
 
 	if c.Document == "" {
-		errorsList = append(errorsList, errors.New("document is required"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "document is required"))
 	} else if len(c.Document) != 11 {
-		errorsList = append(errorsList, errors.New("document should have 11 numbers"))
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "document should have 11 numbers"))
 	}
 
-	// validate birth date
+	if c.BirthDate.IsZero() {
+		errorsList = append(errorsList, *customerrors.NewError(customerrors.INVALID, "birth date is required"))
+	}
 
 	return errorsList
 }

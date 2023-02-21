@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"github.com/backendengineerark/clients-api/internal/entity"
+	"github.com/backendengineerark/clients-api/pkg/customerrors"
+	"github.com/backendengineerark/clients-api/pkg/dates"
 )
 
 type ClientInputDTO struct {
@@ -35,15 +37,14 @@ func NewCreateAccountUseCase() *CreateAccountUseCase {
 	return &CreateAccountUseCase{}
 }
 
-func (ca *CreateAccountUseCase) Execute(input AccountInputDTO) (*AccountOutputDTO, []error) {
+func (ca *CreateAccountUseCase) Execute(input AccountInputDTO) (*AccountOutputDTO, []customerrors.Error) {
 	client, errors := entity.NewClient(input.ClientInputDTO.Name, input.ClientInputDTO.Document, input.ClientInputDTO.BirthDate)
 	if len(errors) > 0 {
 		return nil, errors
 	}
 
-	account, err := entity.NewAccount(input.AccountType, *client)
-	if err != nil {
-		errors = append(errors, err)
+	account, errors := entity.NewAccount(input.AccountType, *client)
+	if len(errors) > 0 {
 		return nil, errors
 	}
 
@@ -54,7 +55,7 @@ func (ca *CreateAccountUseCase) Execute(input AccountInputDTO) (*AccountOutputDT
 			Id:        account.Client.Id,
 			Name:      account.Client.Name,
 			Document:  account.Client.Document,
-			BirthDate: account.Client.BirthDate,
+			BirthDate: dates.DateToString(account.Client.BirthDate),
 		},
 	}, nil
 }
