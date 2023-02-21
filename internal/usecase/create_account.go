@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/backendengineerark/clients-api/internal/entity"
+	"github.com/backendengineerark/clients-api/pkg/conversions"
 	"github.com/backendengineerark/clients-api/pkg/customerrors"
+	"github.com/backendengineerark/clients-api/pkg/customlogs"
 	"github.com/backendengineerark/clients-api/pkg/dates"
 )
 
@@ -53,33 +54,43 @@ func NewCreateAccountUseCase(db sql.DB, clientRepository entity.ClientRepository
 	}
 }
 
-func (ca *CreateAccountUseCase) Execute(input AccountInputDTO) (*AccountOutputDTO, []customerrors.Error, error) {
+func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputDTO) (*AccountOutputDTO, []customerrors.Error, error) {
+	logger := customlogs.ExtractLoggerFromContext(ctx)
+	logger.Printf("Try to validate client")
 
 	client, errors := entity.NewClient(input.ClientInputDTO.Name, input.ClientInputDTO.Document, input.ClientInputDTO.BirthDate)
 	if len(errors) > 0 {
+		logger.Printf("Fail to validate client because %s", conversions.StructToJsonIgnoreErrors(ctx, errors))
 		return nil, errors, nil
 	}
+	logger.Printf("Success to validate client")
 
+	logger.Printf("Try to validate account")
 	account, errors := entity.NewAccount(input.AccountType, *client)
 	if len(errors) > 0 {
+		logger.Printf("Fail to validate account because %s", conversions.StructToJsonIgnoreErrors(ctx, errors))
 		return nil, errors, nil
 	}
+	logger.Printf("Success to validate account")
 
+	logger.Printf("Validate if client already exists by document")
 	clientExists, err := ca.ClientRepository.ExistsByDocument(input.ClientInputDTO.Document)
 	if err != nil {
-		log.Printf("Fail to get client by document %s", err)
+		logger.Printf("Fail to get client by document %s", err)
 		return nil, nil, err
 	}
-
 	if clientExists {
+		logger.Printf("Client already exists with that document")
 		return nil, []customerrors.Error{*customerrors.NewError(customerrors.CLIENT_ALREADY_EXISTS, fmt.Sprintf("Client already exists with document %s", input.ClientInputDTO.Document))}, nil
 	}
+	logger.Printf("Client not exists with that document")
 
-	err = ca.Persist(client, account)
+	err = ca.Persist(ctx, client, account)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	logger.Printf("Success to save client and account")
 	return &AccountOutputDTO{
 		Number:        account.Number,
 		AccountType:   string(account.AccountType),
@@ -95,23 +106,27 @@ func (ca *CreateAccountUseCase) Execute(input AccountInputDTO) (*AccountOutputDT
 	}, nil, nil
 }
 
-func (ca CreateAccountUseCase) Persist(
-	client *entity.Client,
-	account *entity.Account) error {
+func (ca CreateAccountUseCase) Persist(ctx context.Context, client *entity.Client, account *entity.Account) error {
+	logger := customlogs.ExtractLoggerFromContext(ctx)
 
+	logger.Printf("Try to start a transaction")
 	tx, err := ca.Db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	logger.Printf("Transaction started")
 
+	logger.Printf("Try to save a client")
 	if err := ca.ClientRepository.Save(tx, client); err != nil {
-		fmt.Printf("Error to persist client %s", err)
+		logger.Printf("Error to save client %s", err)
 		tx.Rollback()
 		return err
 	}
+	logger.Printf("Success to save client")
 
+	logger.Printf("Try to save account")
 	if err := ca.AccountRepository.Save(tx, account); err != nil {
-		fmt.Printf("Error to persist account %s", err)
+		logger.Printf("Error to save account, rollback started %s", err)
 		tx.Rollback()
 		return err
 	}

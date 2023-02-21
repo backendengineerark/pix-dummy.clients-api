@@ -28,7 +28,6 @@ func NewWebServer(webServerPort int, db *sql.DB) *WebServer {
 }
 
 func (ws *WebServer) Start() {
-	ws.Router.Use(middleware.Logger)
 	ws.Router.Use(middleware.Recoverer)
 
 	clientRepository := database.NewClientRepository(ws.Db)
