@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -32,17 +34,20 @@ type ClientOutputDTO struct {
 type AccountOutputDTO struct {
 	Number          string           `json:"number"`
 	AccountType     string           `json:"account_type"`
+	AccountStatus   string           `json:"account_status"`
 	ClientOutputDTO *ClientOutputDTO `json:"client"`
 	CreatedAt       time.Time        `json:"created_at"`
 }
 
 type CreateAccountUseCase struct {
+	Db                sql.DB
 	ClientRepository  entity.ClientRepositoryInterface
 	AccountRepository entity.AccountRepositoryInterface
 }
 
-func NewCreateAccountUseCase(clientRepository entity.ClientRepositoryInterface, accountRepository entity.AccountRepositoryInterface) *CreateAccountUseCase {
+func NewCreateAccountUseCase(db sql.DB, clientRepository entity.ClientRepositoryInterface, accountRepository entity.AccountRepositoryInterface) *CreateAccountUseCase {
 	return &CreateAccountUseCase{
+		Db:                db,
 		ClientRepository:  clientRepository,
 		AccountRepository: accountRepository,
 	}
@@ -76,9 +81,10 @@ func (ca *CreateAccountUseCase) Execute(input AccountInputDTO) (*AccountOutputDT
 	}
 
 	return &AccountOutputDTO{
-		Number:      account.Number,
-		AccountType: string(account.AccountType),
-		CreatedAt:   account.CreatedAt,
+		Number:        account.Number,
+		AccountType:   string(account.AccountType),
+		AccountStatus: string(account.AccountStatus),
+		CreatedAt:     account.CreatedAt,
 		ClientOutputDTO: &ClientOutputDTO{
 			Id:        account.Client.Id,
 			Name:      account.Client.Name,
@@ -93,16 +99,23 @@ func (ca CreateAccountUseCase) Persist(
 	client *entity.Client,
 	account *entity.Account) error {
 
-	if err := ca.ClientRepository.Save(client); err != nil {
+	tx, err := ca.Db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	if err := ca.ClientRepository.Save(tx, client); err != nil {
 		fmt.Printf("Error to persist client %s", err)
+		tx.Rollback()
 		return err
 	}
 
-	// account.Client.Id = "1"
-	if err := ca.AccountRepository.Save(account); err != nil {
+	if err := ca.AccountRepository.Save(tx, account); err != nil {
 		fmt.Printf("Error to persist account %s", err)
+		tx.Rollback()
 		return err
 	}
 
+	tx.Commit()
 	return nil
 }

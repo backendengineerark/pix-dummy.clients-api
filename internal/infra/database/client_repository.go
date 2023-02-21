@@ -17,8 +17,8 @@ func NewClientRepository(db *sql.DB) *ClientRepository {
 	}
 }
 
-func (cr *ClientRepository) Save(client *entity.Client) error {
-	stmt, err := cr.Db.Prepare("INSERT INTO clients(id, name, document, birth_date, created_at) VALUES(?, ?, ?, ?, ?)")
+func (cr *ClientRepository) Save(tx *sql.Tx, client *entity.Client) error {
+	stmt, err := tx.Prepare("INSERT INTO clients(id, name, document, birth_date, created_at) VALUES(?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}

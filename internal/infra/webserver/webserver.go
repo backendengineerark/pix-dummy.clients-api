@@ -33,7 +33,7 @@ func (ws *WebServer) Start() {
 
 	clientRepository := database.NewClientRepository(ws.Db)
 	accountRepository := database.NewAccountRepository(ws.Db)
-	createAccountUseCase := usecase.NewCreateAccountUseCase(clientRepository, accountRepository)
+	createAccountUseCase := usecase.NewCreateAccountUseCase(*ws.Db, clientRepository, accountRepository)
 	accountHandler := handlers.NewAccountHandler(createAccountUseCase)
 
 	ws.Router.Route("/accounts", func(r chi.Router) {

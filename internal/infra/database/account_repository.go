@@ -16,14 +16,14 @@ func NewAccountRepository(db *sql.DB) *AccountRepository {
 	}
 }
 
-func (ar *AccountRepository) Save(account *entity.Account) error {
-	stmt, err := ar.Db.Prepare("INSERT INTO accounts(number, account_type, client_id, created_at) VALUES(?, ?, ?, ?)")
+func (ar *AccountRepository) Save(tx *sql.Tx, account *entity.Account) error {
+	stmt, err := tx.Prepare("INSERT INTO accounts(number, account_type, account_status, client_id, created_at) VALUES(?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(account.Number, string(account.AccountType), account.Client.Id, account.CreatedAt)
+	_, err = stmt.Exec(account.Number, account.AccountType, account.AccountStatus, account.Client.Id, account.CreatedAt)
 	if err != nil {
 		return err
 	}
