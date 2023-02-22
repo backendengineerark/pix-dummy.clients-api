@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -21,8 +20,7 @@ func NewAccountHandler(createAccountUseCase *usecase.CreateAccountUseCase) *Acco
 }
 
 func (ah *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
-	ctx := customlogs.AttachLoggerToContext(context.Background())
-	logger := customlogs.ExtractLoggerFromContext(ctx)
+	logger := customlogs.GetContextLogger(r.Context())
 
 	var input usecase.AccountInputDTO
 
@@ -34,9 +32,9 @@ func (ah *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	logger.Printf("Try to create account with input=%s", conversions.StructToJsonIgnoreErrors(ctx, input))
+	logger.Printf("Try to create account with input=%s", conversions.StructToJsonIgnoreErrors(r.Context(), input))
 
-	output, errors, err := ah.CreateAccountUseCase.Execute(ctx, input)
+	output, errors, err := ah.CreateAccountUseCase.Execute(r.Context(), input)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -49,7 +47,7 @@ func (ah *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	logger.Printf("Success to process with result %s", conversions.StructToJsonIgnoreErrors(ctx, output))
+	logger.Printf("Success to process with result %s", conversions.StructToJsonIgnoreErrors(r.Context(), output))
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(output)
 }

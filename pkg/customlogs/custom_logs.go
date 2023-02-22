@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/google/uuid"
 )
 
 type LoggerKey struct{}
@@ -17,10 +15,6 @@ func NewLogger(correlationId string) *log.Logger {
 	return logger
 }
 
-func AttachLoggerToContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, LoggerKey{}, NewLogger(uuid.New().String()))
-}
-
-func ExtractLoggerFromContext(ctx context.Context) *log.Logger {
+func GetContextLogger(ctx context.Context) *log.Logger {
 	return ctx.Value(LoggerKey{}).(*log.Logger)
 }

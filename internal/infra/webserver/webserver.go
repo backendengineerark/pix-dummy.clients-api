@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/backendengineerark/clients-api/internal/infra/database"
+	"github.com/backendengineerark/clients-api/internal/infra/webserver/custom_middleware"
 	"github.com/backendengineerark/clients-api/internal/infra/webserver/handlers"
 	"github.com/backendengineerark/clients-api/internal/usecase"
 	"github.com/go-chi/chi/v5"
@@ -29,6 +30,7 @@ func NewWebServer(webServerPort int, db *sql.DB) *WebServer {
 
 func (ws *WebServer) Start() {
 	ws.Router.Use(middleware.Recoverer)
+	ws.Router.Use(custom_middleware.LoggerWithCorrelationId)
 
 	clientRepository := database.NewClientRepository(ws.Db)
 	accountRepository := database.NewAccountRepository(ws.Db)

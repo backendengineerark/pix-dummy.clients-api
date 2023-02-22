@@ -55,7 +55,7 @@ func NewCreateAccountUseCase(db sql.DB, clientRepository entity.ClientRepository
 }
 
 func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputDTO) (*AccountOutputDTO, []customerrors.Error, error) {
-	logger := customlogs.ExtractLoggerFromContext(ctx)
+	logger := customlogs.GetContextLogger(ctx)
 	logger.Printf("Try to validate client")
 
 	client, errors := entity.NewClient(input.ClientInputDTO.Name, input.ClientInputDTO.Document, input.ClientInputDTO.BirthDate)
@@ -107,7 +107,7 @@ func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputD
 }
 
 func (ca CreateAccountUseCase) Persist(ctx context.Context, client *entity.Client, account *entity.Account) error {
-	logger := customlogs.ExtractLoggerFromContext(ctx)
+	logger := customlogs.GetContextLogger(ctx)
 
 	logger.Printf("Try to start a transaction")
 	tx, err := ca.Db.BeginTx(context.Background(), nil)
