@@ -11,6 +11,7 @@ import (
 	"github.com/backendengineerark/clients-api/pkg/customerrors"
 	"github.com/backendengineerark/clients-api/pkg/customlogs"
 	"github.com/backendengineerark/clients-api/pkg/dates"
+	"github.com/backendengineerark/clients-api/pkg/events"
 )
 
 type ClientInputDTO struct {
@@ -41,16 +42,20 @@ type AccountOutputDTO struct {
 }
 
 type CreateAccountUseCase struct {
-	Db                sql.DB
-	ClientRepository  entity.ClientRepositoryInterface
-	AccountRepository entity.AccountRepositoryInterface
+	Db                  sql.DB
+	ClientRepository    entity.ClientRepositoryInterface
+	AccountRepository   entity.AccountRepositoryInterface
+	AccountCreatedEvent events.EventInterface
+	EventDispatcher     events.EventDispatcherInterface
 }
 
-func NewCreateAccountUseCase(db sql.DB, clientRepository entity.ClientRepositoryInterface, accountRepository entity.AccountRepositoryInterface) *CreateAccountUseCase {
+func NewCreateAccountUseCase(db sql.DB, clientRepository entity.ClientRepositoryInterface, accountRepository entity.AccountRepositoryInterface, accountCreatedEvent events.EventInterface, eventDispatcher events.EventDispatcherInterface) *CreateAccountUseCase {
 	return &CreateAccountUseCase{
-		Db:                db,
-		ClientRepository:  clientRepository,
-		AccountRepository: accountRepository,
+		Db:                  db,
+		ClientRepository:    clientRepository,
+		AccountRepository:   accountRepository,
+		AccountCreatedEvent: accountCreatedEvent,
+		EventDispatcher:     eventDispatcher,
 	}
 }
 
@@ -91,7 +96,7 @@ func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputD
 	}
 
 	logger.Printf("Success to save client and account")
-	return &AccountOutputDTO{
+	accountOutputDto := &AccountOutputDTO{
 		Number:        account.Number,
 		AccountType:   string(account.AccountType),
 		AccountStatus: string(account.AccountStatus),
@@ -103,7 +108,12 @@ func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputD
 			BirthDate: dates.DateToString(account.Client.BirthDate),
 			CreatedAt: account.Client.CreatedAt,
 		},
-	}, nil, nil
+	}
+
+	ca.AccountCreatedEvent.SetPayload(accountOutputDto)
+	ca.EventDispatcher.Dispatch(ca.AccountCreatedEvent)
+
+	return accountOutputDto, nil, nil
 }
 
 func (ca CreateAccountUseCase) Persist(ctx context.Context, client *entity.Client, account *entity.Account) error {

@@ -7,6 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/google/uuid v1.1.2
 	github.com/spf13/viper v1.15.0
+	github.com/streadway/amqp v1.0.0
 )
 
 require (
