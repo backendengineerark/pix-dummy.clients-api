@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
@@ -27,12 +28,12 @@ func (ed *EventDispatcher) Register(eventName string, handler EventHandlerInterf
 	return nil
 }
 
-func (ed *EventDispatcher) Dispatch(event EventInterface) error {
+func (ed *EventDispatcher) Dispatch(ctx context.Context, event EventInterface) error {
 	if handlers, ok := ed.handlers[event.GetName()]; ok {
 		wg := sync.WaitGroup{}
 		for _, handler := range handlers {
 			wg.Add(1)
-			go handler.Handle(event, &wg)
+			go handler.Handle(ctx, event, &wg)
 		}
 	}
 	return nil

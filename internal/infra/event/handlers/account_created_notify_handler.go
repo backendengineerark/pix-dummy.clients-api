@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 
+	"github.com/backendengineerark/clients-api/pkg/customlogs"
 	"github.com/backendengineerark/clients-api/pkg/events"
 	"github.com/streadway/amqp"
 )
@@ -19,12 +20,14 @@ func NewAccountCreatedNotifyHandler(rabbitMQChannel *amqp.Channel) *AccountCreat
 	}
 }
 
-func (ach *AccountCreatedNotifyHandler) Handle(event events.EventInterface, wg *sync.WaitGroup) {
+func (ach *AccountCreatedNotifyHandler) Handle(ctx context.Context, event events.EventInterface, wg *sync.WaitGroup) {
+	logger := customlogs.GetContextLogger(ctx)
+
+	logger.Printf("Try to notify by rabbimq")
 	defer wg.Done()
-	fmt.Println("Try to notify")
 	jsonOutput, err := json.Marshal(event.GetPayload())
 	if err != nil {
-		fmt.Println("fail to encode")
+		logger.Printf("fail to encode payload to json %s", event.GetPayload())
 	}
 
 	err = ach.RabbitMQChannel.Publish(
@@ -38,8 +41,8 @@ func (ach *AccountCreatedNotifyHandler) Handle(event events.EventInterface, wg *
 		},
 	)
 	if err != nil {
-		fmt.Println("fail to send")
+		logger.Printf("fail to send message to rabbimq beacause %s", err)
 	}
 
-	fmt.Println("Success to notify rabbitmq")
+	logger.Printf("Success to notify rabbitmq")
 }

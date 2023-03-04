@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -13,11 +14,11 @@ type EventInterface interface {
 }
 
 type EventHandlerInterface interface {
-	Handle(event EventInterface, wg *sync.WaitGroup)
+	Handle(ctx context.Context, event EventInterface, wg *sync.WaitGroup)
 }
 
 type EventDispatcherInterface interface {
 	Register(eventName string, handler EventHandlerInterface) error
-	Dispatch(event EventInterface) error
+	Dispatch(ctx context.Context, event EventInterface) error
 	Has(eventName string, handler EventHandlerInterface) bool
 }

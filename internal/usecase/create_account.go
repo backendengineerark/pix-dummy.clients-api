@@ -111,7 +111,7 @@ func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputD
 	}
 
 	ca.AccountCreatedEvent.SetPayload(accountOutputDto)
-	ca.EventDispatcher.Dispatch(ca.AccountCreatedEvent)
+	ca.EventDispatcher.Dispatch(ctx, ca.AccountCreatedEvent)
 
 	return accountOutputDto, nil, nil
 }
