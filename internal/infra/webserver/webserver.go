@@ -37,7 +37,7 @@ func NewWebServer(webServerPort int, db *sql.DB, rabbitMQChannel *amqp.Channel) 
 
 func (ws *WebServer) Start() {
 	ws.Router.Use(middleware.Recoverer)
-	ws.Router.Use(custom_middleware.LoggerWithCorrelationId)
+	ws.Router.Use(custom_middleware.TracingRequest)
 
 	clientRepository := database.NewClientRepository(ws.Db)
 	accountRepository := database.NewAccountRepository(ws.Db)
