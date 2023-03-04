@@ -122,6 +122,7 @@ func (ca CreateAccountUseCase) Persist(ctx context.Context, client *entity.Clien
 	logger.Printf("Try to start a transaction")
 	tx, err := ca.Db.BeginTx(context.Background(), nil)
 	if err != nil {
+		logger.Printf("fail to start a transaction because %s", err)
 		return err
 	}
 	logger.Printf("Transaction started")
