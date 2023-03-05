@@ -12,6 +12,7 @@ import (
 	"github.com/backendengineerark/clients-api/internal/infra/webserver/handlers"
 	"github.com/backendengineerark/clients-api/internal/usecase"
 	"github.com/backendengineerark/clients-api/pkg/events"
+	"github.com/backendengineerark/clients-api/pkg/uow"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/streadway/amqp"
@@ -39,6 +40,7 @@ func (ws *WebServer) Start() {
 	ws.Router.Use(middleware.Recoverer)
 	ws.Router.Use(custom_middleware.TracingRequest)
 
+	uow := uow.NewUow(ws.Db)
 	clientRepository := database.NewClientRepository(ws.Db)
 	accountRepository := database.NewAccountRepository(ws.Db)
 	accountCreatedEvent := event.NewAccountCreated()
@@ -46,7 +48,7 @@ func (ws *WebServer) Start() {
 
 	eventDispatcher.Register(accountCreatedEvent.GetName(), event_handlers.NewAccountCreatedNotifyHandler(ws.RabbitMQChannel))
 
-	createAccountUseCase := usecase.NewCreateAccountUseCase(*ws.Db, clientRepository, accountRepository, accountCreatedEvent, eventDispatcher)
+	createAccountUseCase := usecase.NewCreateAccountUseCase(uow, clientRepository, accountRepository, accountCreatedEvent, eventDispatcher)
 	accountHandler := handlers.NewAccountHandler(createAccountUseCase)
 
 	ws.Router.Route("/accounts", func(r chi.Router) {

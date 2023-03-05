@@ -12,6 +12,7 @@ import (
 	"github.com/backendengineerark/clients-api/pkg/customlogs"
 	"github.com/backendengineerark/clients-api/pkg/dates"
 	"github.com/backendengineerark/clients-api/pkg/events"
+	"github.com/backendengineerark/clients-api/pkg/uow"
 )
 
 type ClientInputDTO struct {
@@ -42,16 +43,16 @@ type AccountOutputDTO struct {
 }
 
 type CreateAccountUseCase struct {
-	Db                  sql.DB
+	Uow                 uow.Uow
 	ClientRepository    entity.ClientRepositoryInterface
 	AccountRepository   entity.AccountRepositoryInterface
 	AccountCreatedEvent events.EventInterface
 	EventDispatcher     events.EventDispatcherInterface
 }
 
-func NewCreateAccountUseCase(db sql.DB, clientRepository entity.ClientRepositoryInterface, accountRepository entity.AccountRepositoryInterface, accountCreatedEvent events.EventInterface, eventDispatcher events.EventDispatcherInterface) *CreateAccountUseCase {
+func NewCreateAccountUseCase(uow *uow.Uow, clientRepository entity.ClientRepositoryInterface, accountRepository entity.AccountRepositoryInterface, accountCreatedEvent events.EventInterface, eventDispatcher events.EventDispatcherInterface) *CreateAccountUseCase {
 	return &CreateAccountUseCase{
-		Db:                  db,
+		Uow:                 *uow,
 		ClientRepository:    clientRepository,
 		AccountRepository:   accountRepository,
 		AccountCreatedEvent: accountCreatedEvent,
@@ -65,18 +66,18 @@ func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputD
 
 	client, errors := entity.NewClient(input.ClientInputDTO.Name, input.ClientInputDTO.Document, input.ClientInputDTO.BirthDate)
 	if len(errors) > 0 {
-		logger.Printf("Fail to validate client because %s", conversions.StructToJsonIgnoreErrors(ctx, errors))
+		logger.Printf("Fail to instance client because %s", conversions.StructToJsonIgnoreErrors(ctx, errors))
 		return nil, errors, nil
 	}
-	logger.Printf("Success to validate client")
+	logger.Printf("Success to instance client")
 
 	logger.Printf("Try to validate account")
 	account, errors := entity.NewAccount(input.AccountType, *client)
 	if len(errors) > 0 {
-		logger.Printf("Fail to validate account because %s", conversions.StructToJsonIgnoreErrors(ctx, errors))
+		logger.Printf("Fail to instance account because %s", conversions.StructToJsonIgnoreErrors(ctx, errors))
 		return nil, errors, nil
 	}
-	logger.Printf("Success to validate account")
+	logger.Printf("Success to instance account with number %s", account.Number)
 
 	logger.Printf("Validate if client already exists by document")
 	clientExists, err := ca.ClientRepository.ExistsByDocument(input.ClientInputDTO.Document)
@@ -92,6 +93,7 @@ func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputD
 
 	err = ca.Persist(ctx, client, account)
 	if err != nil {
+		logger.Printf("Fail to persist %s", err)
 		return nil, nil, err
 	}
 
@@ -119,30 +121,18 @@ func (ca *CreateAccountUseCase) Execute(ctx context.Context, input AccountInputD
 func (ca CreateAccountUseCase) Persist(ctx context.Context, client *entity.Client, account *entity.Account) error {
 	logger := customlogs.GetContextLogger(ctx)
 
-	logger.Printf("Try to start a transaction")
-	tx, err := ca.Db.BeginTx(ctx, nil)
-	defer ca.Db.Close()
+	return ca.Uow.Execute(ctx, func(tx *sql.Tx) error {
+		logger.Printf("Try to save a client")
+		if err := ca.ClientRepository.Save(tx, client); err != nil {
+			return err
+		}
+		logger.Printf("Success to save client")
 
-	if err != nil {
-		logger.Printf("Fail to start a transaction because %s", err)
-		return err
-	}
-	logger.Printf("Transaction started")
-
-	logger.Printf("Try to save a client")
-	if err := ca.ClientRepository.Save(tx, client); err != nil {
-		logger.Printf("Error to save client %s", err)
-		tx.Rollback()
-		return err
-	}
-	logger.Printf("Success to save client")
-
-	logger.Printf("Try to save account")
-	if err := ca.AccountRepository.Save(tx, account); err != nil {
-		logger.Printf("Error to save account, rollback started %s", err)
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
+		logger.Printf("Try to save account")
+		if err := ca.AccountRepository.Save(tx, account); err != nil {
+			return err
+		}
+		logger.Printf("Success to save account")
+		return nil
+	})
 }
